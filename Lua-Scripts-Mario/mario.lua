@@ -274,6 +274,7 @@ while true do
 	--joypad.set(dis_shit, 1)
 	myvar = 0x7E0071 --ANIMATION 0x00 livre 0x09 - morrendo
 	--7E0100 - GAMESTATE http://www.smwiki.net/wiki/RAM_Address/$7E:0100
+	--7E13D6 - Timer de fim de fase (fica em 0x50 durante a fase toda)
 	memory.usememorydomain("System Bus")
 	if (memory.read_u8(myvar) == 0x09) then
 		gui.text(0,20, "MORRENDO")
