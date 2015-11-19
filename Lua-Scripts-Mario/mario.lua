@@ -63,9 +63,6 @@ local function mario()
 	local yoffpoint = 0x1b65c
 	local yradpoint = 0x1b660
 	local i = 0
-	
-	_G MARIO_XIS
-	_G MARIO_YPSILON
 
 	memory.usememorydomain("CARTROM")
 	
@@ -324,9 +321,14 @@ function get_tile(offset_X, offset_Y)
 
     memory.usememorydomain("WRAM")
 
-
     local x = math.floor((MARIO_XIS + offset_X + 8)/16)
     local y = math.floor((MARIO_YPSILON + offset_Y)/16)
+
+    local screenX = MARIO_XIS - memory.read_s16_le(0x1A)
+    local screenY = MARIO_YPSILON - memory.read_s16_le(0x1C)
+    local off = 8
+
+    gui.drawBox(screenX+offset_X,screenY+offset_Y,screenX+offset_X+off,screenY+offset_Y+2*off,outl,fill)
 
     -- gui.text(0, 150,(math.floor(x/0x10)*0x1B0).."  "..(y*0x10).."  "..(x%0x10)..".."..(0x1C800 + math.floor(x/0x10)*0x1B0 + y*0x10 + x%0x10))
     return memory.readbyte(0x1C800 + math.floor(x/0x10)*0x1B0 + y*0x10 + x%0x10)
