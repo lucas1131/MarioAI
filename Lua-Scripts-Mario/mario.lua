@@ -5,6 +5,7 @@ local mariox = 0x94
 local marioy = 0x96
 local mtype = 0x19
 local marioside = 0x76
+
 --Camera
 local camx = 0x1A
 local camy = 0x1C
@@ -62,9 +63,17 @@ local function mario()
 	local yoffpoint = 0x1b65c
 	local yradpoint = 0x1b660
 	local i = 0
+	
+	_G MARIO_XIS
+	_G MARIO_YPSILON
+
 	memory.usememorydomain("CARTROM")
-	x = mainmemory.read_u16_le(mariox) - mainmemory.read_u16_le(camx)
-	y = mainmemory.read_u16_le(marioy) - mainmemory.read_u16_le(camy)
+	
+	MARIO_XIS = mainmemory.read_u16_le(mariox)
+	MARIO_YPSILON = mainmemory.read_u16_le(marioy)
+
+	x = MARIO_XIS - mainmemory.read_u16_le(camx)
+	y = MARIO_YPSILON - mainmemory.read_u16_le(camy)
 
 
 	if mainmemory.read_u8(mtype) == 0 or mainmemory.read_u8(0x73) ~= 0 then
@@ -109,11 +118,8 @@ local function projectiles()
 
 			gui.drawBox(x+xoff,y+yoff,x+xoff+xrad,y+yoff+yrad,0xFF000000,0x500000)
 		end
-
 	end
-
 end
-
 
 local function objects()
 	local oend = 20
@@ -173,12 +179,8 @@ local function objects()
 			if objtype ~= 0x8C then
 				gui.drawBox(x+xoff,y+yoff,x+xoff+xrad,y+yoff+yrad,outl,fill)
 			end
-
-
 		end
-
 	end
-
 end
 
 local function invulns()
@@ -233,57 +235,149 @@ local function invulns()
 			gui.drawBox(x+xoff,y+yoff,x+xoff+xrad,y+yoff+yrad,0xFFFFFF00,0x30FFFF00)
 		end
 	end
-
-
-
 end
 
-local dis_shit={}
+--------------------------------------------------
+--
+-- NOSSA PARTE
+--
+--------------------------------------------------
 
+-- Get tempo restante do level
 local function get_level_time()
-	local time_hundred = 0x7E0F31
-	local time_dec = 0x7E0F32
-	local time_unit = 0x7E0F33
-	memory.usememorydomain("System Bus")
-	local times = (100 * memory.read_u8(time_hundred) + 10 * memory.read_u8(time_dec) + memory.read_u8(time_unit))
-	gui.text(0,40, times)
-	return times
+
+    local time_hundred = 0x7E0F31
+    local time_dec = 0x7E0F32
+    local time_unit = 0x7E0F33
+
+    memory.usememorydomain("System Bus")
+
+    local times = (100 * memory.read_u8(time_hundred) + 10 * memory.read_u8(time_dec) + memory.read_u8(time_unit))
+
+    gui.text(0,40, times)
+
+    return times
 end
 
+-- Calculo da fitness
+-- 
+-- (distancia*peso1 + tempoRestante*peso2 ?(+ score*peso3) + lvlCleared)
+-- Objetivo: maximizar a funcao fitness
 local function fitness()
-	memory.usememorydomain("System Bus")
-	local PLAYER_POS_ADRESS = 0x7E00D1
-	local player_pos = memory.read_u16_le(PLAYER_POS_ADRESS)
-	gui.text(0,60, player_pos)
-	return player_pos, get_level_time()
+
+    memory.usememorydomain("System Bus")
+
+    local PLAYER_POS_ADRESS = 0x7E00D1
+    local player_posX = memory.read_u16_le(PLAYER_POS_ADRESS)
+
+    gui.text(0,60, "Mario x: " .. player_posX)
+
+    return player_pos, get_level_time()
+end
+
+local function print_buttons()
+
+    local controler_table = joypad.get(1)
+
+    if (controler_table.A) then
+        gui.text(450,00, "A")
+    end
+    if (controler_table.B) then
+        gui.text(460,00, "B")
+    end
+    if (controler_table.X) then
+        gui.text(470,00, "X")
+    end
+    if (controler_table.Y) then
+        gui.text(480,00, "Y")
+    end
+    if (controler_table.Right) then
+        gui.text(450,10, "R")
+    end
+    if (controler_table.Left) then
+        gui.text(460,10, "L")
+    end
+    if (controler_table.Up) then
+        gui.text(470,10, "U")
+    end
+    if (controler_table.Down) then
+        gui.text(480,10, "D")
+    end
+end
+
+-- Verifica se chegou no fim da fase
+local function level_end()
+
+    memory.usememorydomain("System Bus")
+
+    local TIMER_ADRESS = 0x7E13D6
+
+    if (memory.read_u16_le(TIMER_ADRESS) == 0x49) then
+        return true
+    else
+        return false
+    end
+end
+
+-- Get se o title no offset (x, y) e rigido ou nao
+function get_tile(offset_X, offset_Y)
+
+    memory.usememorydomain("WRAM")
+
+
+    local x = math.floor((MARIO_XIS + offset_X + 8)/16)
+    local y = math.floor((MARIO_YPSILON + offset_Y)/16)
+
+    -- gui.text(0, 150,(math.floor(x/0x10)*0x1B0).."  "..(y*0x10).."  "..(x%0x10)..".."..(0x1C800 + math.floor(x/0x10)*0x1B0 + y*0x10 + x%0x10))
+    return memory.readbyte(0x1C800 + math.floor(x/0x10)*0x1B0 + y*0x10 + x%0x10)
 end
 
 emu.limitframerate(true)
 
-while true do
-	dis_shit = joypad.get(1)
-	mario()
-	objects()
-	invulns()
-	projectiles()
-	get_level_time()
-	fitness()
+Pop = 300
+MutationRate = 0.1
+MutationChance = 0.2
+CrossoverChance = 0.5
 
-	--dis_shit.Right = true
-	--dis_shit.Y = true
-	--joypad.set(dis_shit, 1)
-	myvar = 0x7E0071 --ANIMATION 0x00 livre 0x09 - morrendo
-	--7E0100 - GAMESTATE http://www.smwiki.net/wiki/RAM_Address/$7E:0100
-	--7E13D6 - Timer de fim de fase (fica em 0x50 durante a fase toda)
-	memory.usememorydomain("System Bus")
-	if (memory.read_u8(myvar) == 0x09) then
-		gui.text(0,20, "MORRENDO")
+weight1 = 0.8
+weight2 = 0.2
+clear = 1000
+
+inputs = {Right = true}
+travelDistance = 0
+timeLeft = 0
+
+while true do
+    
+	-- load_state()
+
+    mario()
+    objects()
+    invulns()
+    projectiles()
+
+    get_level_time()
+    print_buttons()
+    get_tile()
+
+    marioState = 0x7E0071 -- ANIMATION 0x00 livre 0x09 - morrendo
+
+    -- 7E0100 - GAMESTATE http://www.smwiki.net/wiki/RAM_Address/$7E:0100
+    -- 7E13D6 - Timer de fim de fase (fica em 0x50 durante a fase toda)
+    memory.usememorydomain("System Bus")
+    if (memory.read_u8(marioState) == 0x09) then
+
+        gui.text(0,20, "DEATH MY OLD FRIEND")
+
+    	travelDistance, timeLeft = unpack{fitness()}
+    	-- fitness[i] = travelDistance*weight1 + timeLeft*weight2
+    end
+
+    if (level_end()) then
+    	gui.text(0, 20, "VC EH O BIXAO MERMO Q BLAZER")
+    	travelDistance, timeLeft = unpack{fitness()}
+    	-- fitness[i] = travelDistance*weight1 + timeLeft*weight2 + clear
 	end
-	a, b = unpack{fitness()}
-	if (posy > 300) then
-		gui.text(0,0, a.."  "..b)
-	end
-	if dis_shit.B then
-	end
-	emu.frameadvance()
+
+    emu.frameadvance()
 end
