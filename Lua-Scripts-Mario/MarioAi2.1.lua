@@ -411,6 +411,13 @@ genoma_size = 1200
 
 math.randomseed(os.time()) -- eh bom usar seed que nao fosse o tempo soh pa saber ql a seed
 
+function print_pop()
+	for i=1,pop_size do
+		print("candidate[",i,"].fitness=",candidate[i].fitness)
+	end
+end
+
+
 --funçao que retorna aleatoriamente um valor true ou false
 local function random_bool()
 	return (math.random(1, 10) > 5)
@@ -419,10 +426,6 @@ end
 local function Select_population_and_Hittler( )
 	local mother
 	local father
-	table.sort(candidate, function ( a,b )
-			return (a.fitness > b.fitness)
-		end)
-
 	for i = pop_size*0.5, pop_size do
 		--selecioanndo os pais
 		mother = math.random(1,0.5*pop_size)
@@ -521,9 +524,13 @@ for	i=1, max_generation do
 
 				--gui.text(0, 80, travelDistance.."    "..timeLeft)
 			end
-
-	    emu.frameadvance()
+	   		emu.frameadvance()
 		end		
+		table.sort(candidate, function ( a,b )
+			return (a.fitness > b.fitness)
+		end)
+		print("========GENARATION", i, "==================")
+		print_pop()
 	end
 	--selecionar a populaçao
 
