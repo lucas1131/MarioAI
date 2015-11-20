@@ -426,10 +426,10 @@ end
 local function Select_population_and_Hittler( )
 	local mother
 	local father
-	for i = pop_size*0.5, pop_size do
+	for i = pop_size*0.2, pop_size do
 		--selecioanndo os pais
-		mother = math.random(1,0.5*pop_size)
-		father = math.random(1,0.5*pop_size)
+		mother = math.random(1,0.2*pop_size)
+		father = math.random(1,0.2*pop_size)
 		--intercalando os genes dos pais no filho
 		for j=1,genoma_size do
 			if (random_bool()) then
@@ -526,14 +526,14 @@ for	i=1, max_generation do
 			end
 	   		emu.frameadvance()
 		end		
-		table.sort(candidate, function ( a,b )
-			return (a.fitness > b.fitness)
-		end)
-		print("========GENARATION", i, "==================")
-		print_pop()
+		
 	end
 	--selecionar a populaçao
-
+	table.sort(candidate, function ( a,b )
+		return (a.fitness > b.fitness)
+	end)
+	print("========GENARATION", i, "==================")
+	print_pop()
 	Select_population_and_Hittler()
 
 	--reproduzir a populaçao
