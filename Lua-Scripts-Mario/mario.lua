@@ -328,6 +328,52 @@ function is_he_deaded_yet()
 	return false
 end
 
+--variaveis da is_dumb
+MAX_XIS = 0 --X maximo alcancado
+dumb_counter = 0 --contador de tempo pra ver se ele ta  avancando na fase
+LAST_GROUND = 0
+--ve se ele ta andando na fase
+function is_dumb()
+
+	if (MARIO_XIS > MAX_XIS) then	--se tiver andando ta deboas
+		MAX_XIS = MARIO_XIS
+	else
+		--se ele estiver mudando de altura ta deboas
+		if (is_grounded()) then
+			if (MARIO_YPSILON ~= LAST_GROUND) then
+				LAST_GROUND = MARIO_YPSILON
+				dumb_counter = 0
+			else
+
+				--se nao tiver de boas roda o contador
+				if (dumb_counter > 0) then
+					if (emu.framecount()%60 == 0) then
+						dumb_counter = dumb_counter - 1
+						if (dumb_counter == 0) then
+							return true
+						end
+					end
+				else
+					dumb_counter = 10 --segundos de esperteza
+				end
+			end
+		end
+	end
+
+	return false
+end
+
+--verifica se o mehrio ta no chao
+function is_grounded()
+	memory.usememorydomain("System Bus")
+	local GROUNDED_ADRESS = 0x7E0072
+	if (memory.read_u8(GROUNDED_ADRESS) == 0) then
+		return true
+	else
+		return false
+	end
+end
+
 -- Get se o title no offset (x, y) e rigido ou nao
 function get_tile(offset_X, offset_Y)
 
