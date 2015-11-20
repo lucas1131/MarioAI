@@ -5,6 +5,7 @@ local mariox = 0x94
 local marioy = 0x96
 local mtype = 0x19
 local marioside = 0x76
+local mariostate = 0x7E0071
 
 --Camera
 local camx = 0x1A
@@ -65,7 +66,7 @@ local function mario()
 	local i = 0
 
 	memory.usememorydomain("CARTROM")
-	
+
 	MARIO_XIS = mainmemory.read_u16_le(mariox)
 	MARIO_YPSILON = mainmemory.read_u16_le(marioy)
 
@@ -257,7 +258,7 @@ local function get_level_time()
 end
 
 -- Calculo da fitness
--- 
+--
 -- (distancia*peso1 + tempoRestante*peso2 ?(+ score*peso3) + lvlCleared)
 -- Objetivo: maximizar a funcao fitness
 local function fitness()
@@ -269,7 +270,7 @@ local function fitness()
 
     gui.text(0,60, "Mario x: " .. player_posX)
 
-    return player_pos, get_level_time()
+    return player_posX, get_level_time()
 end
 
 local function print_buttons()
@@ -309,11 +310,22 @@ local function level_end()
 
     local TIMER_ADRESS = 0x7E13D6
 
-    if (memory.read_u16_le(TIMER_ADRESS) == 0x49) then
+    if (memory.read_u8(TIMER_ADRESS) == 0x49) then
         return true
     else
         return false
     end
+end
+
+--verifica se esta morrendo
+function is_he_deaded_yet()
+	memory.usememorydomain("System Bus")
+	if (memory.read_u8(mariostate) == 0x09) then
+			gui.text(0,20, "DEATH MY OLD FRIEND")
+			return true
+	end
+
+	return false
 end
 
 -- Get se o title no offset (x, y) e rigido ou nao
@@ -349,8 +361,106 @@ inputs = {Right = true}
 travelDistance = 0
 timeLeft = 0
 
-while true do
-    
+math.randomseed(os.time()) -- eh bom usar seed que nao fosse o tempo soh pa saber ql a seed
+
+--funaçoq ue retorn aleatoriamente um valor true ou false
+local function random_bool()
+	return (math.random(1, 10) > 5)
+end
+
+local max_generation =20
+local pop_size = 10
+local genoma_size = 1200
+
+
+--criar a populaçao
+candidate = {}
+new_gene = {}
+
+for i=1, pop_size do
+    candidate[i] = {}
+    candidate[i].genoma = {}
+    candidate[i].fitness = 0.0
+    for j=1, genoma_size do
+    	candidate[i].genoma[j] = {}
+    	--setando os botoes do controle
+    	candidate[i].genoma[j].A = random_bool()
+      candidate[i].genoma[j].B = random_bool()
+      candidate[i].genoma[j].X = random_bool()
+      candidate[i].genoma[j].Y = random_bool()
+      candidate[i].genoma[j].Up = false --random_bool()
+      candidate[i].genoma[j].Down = false --random_bool()
+      candidate[i].genoma[j].Right = true --random_bool()
+      candidate[i].genoma[j].Left = false --random_bool()
+    end
+end
+
+--[["pritando a populaçao"
+for i=1, pop_size do
+	print("candidate[",i,"]")
+	for j=1, genoma_size do
+    	print("gene[",j,"]=",candidate[i].genoma[j].A)
+		--print(candidate[i].genoma[j].B)
+	end
+end]]
+print("JA ACABO, JESSICA?")
+savestate.save("savedajesscica.extensaoaki")
+
+--geraçao
+for	i=1, max_generation do
+	--cada individuo
+	for j=1, pop_size do
+		local movimento = 1
+		--fazer o fitness
+		---quanicagesimo setimo filho sera dalse
+		fim = false
+		--fitnes do individuo rodando uma simulaçao
+
+		savestate.load("savedajesscica.extensaoaki")
+		print("individuo[",j,"]")
+		while not fim do
+			--hue = math.random(0, 1)
+			mario()
+			objects()
+			invulns()
+			projectiles()
+
+			get_level_time()
+	    print_buttons()
+			get_tile(32, 32)
+			fitness()
+
+			joypad.set(candidate[j].genoma[movimento], 1)
+
+			if (emu.framecount()%20 == 0) then
+				movimento = movimento + 1
+			end
+
+			if (is_he_deaded_yet() or level_end()) then
+				fim = true
+				travelDistance, timeLeft = unpack{fitness()}
+				--gui.text(0, 80, travelDistance.."    "..timeLeft)
+					print("distancia percorrida =",travelDistance,"   tempo restante =", timeLeft)
+			end
+
+	    emu.frameadvance()
+		end
+	end
+	--[[selecionar a populaçao
+	for i=1, pop_size do
+		select = i,do
+		for 0
+
+			end
+		end]]
+
+	--reproduzir a populaçao
+end
+
+------ dalse.... kd vc???
+
+--[[while true do
+
 	-- load_state()
 
     mario()
@@ -382,4 +492,4 @@ while true do
 	end
 
     emu.frameadvance()
-end
+end]]
