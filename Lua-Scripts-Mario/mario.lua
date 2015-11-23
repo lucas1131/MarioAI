@@ -1,56 +1,82 @@
---Author Pasky13
+-- Author Pasky13
 
---Mario
+-- Mario
 local mariox = 0x94
 local marioy = 0x96
 local mtype = 0x19
 local marioside = 0x76
-local mariostate = 0x7E0071
 
---Camera
+-- SPRITES KEYS
+YOSHI = 0x35
+YOSHI_EGG = 0x2C
+BABY_YOSHI = 0x2D
+WIGGLER = 0x86
+KOOPA_SHELLS_START = 0xDA
+KOOPA_SHELLS_END = 0xDD
+KEYHOLE = 0x0E
+UNUSED = 0x12
+UNUSED2 = 0x36
+LVL_MSG = 0x19
+COIN = 0x21
+P_SWITCH = 0x3E
+SPRINGBOARD = 0x2F
+THROW_BLOCK = 0x53
+TITLES_START = 0x54
+TITLES_END = 0x6D
+USELESS_START = 0x45
+USELESS_END = 0x4c
+PICKUP_START = 0x74
+PICKUP_END = 0x8F
+USELESS_2_START = 0x9C
+USELESS_2_END = 0xFF
+-- IF NEEDED CONTINUE STARTING AT 0x90
+-- http://www.smwiki.net/wiki/Sprite
+
+-- GLOBAL ADDRESSES
+PLAYER_STATE_ADDRESS = 0x7E0071
+PLAYER_POS_ADDRESS = 0x7E00D1
+TIMER_ADDRESS = 0x7E13D6
+GROUNDED_ADDRESS = 0x7E0072
+ENEMY_X_BASE_ADDRESS = 0xE4
+ENEMY_y_BASE_ADDRESS = 0xD8
+PAGE_X_BASE_ADDRESS = 0x14E0
+PAGE_Y_BASE_ADDRESS = 0x14D4
+OBJECT_TYPE_ADDRESS = 0x9E
+
+-- Camera
 local camx = 0x1A
 local camy = 0x1C
 
---Object Addresses
-local exbase = 0xE4
-local eybase = 0xD8
-local pagexbase = 0x14E0
-local pageybase = 0x14D4
-local otype = 0x9E
+-- Object Addresses
 local boxpointer = 0x1662
 local xoffbase = 0x01b56c
 local yoffbase = 0x01b5e4
 local xradbase = 0x01b5a8
 local yradbase = 0x01b620
-
 local oactive = 0x14C8
 
---Invulnerable objects (ghost rings etc...)
+-- Invulnerable objects (ghost rings etc...)
 local inv_ybase = 0x1E02
 local inv_xbase = 0x1E16
 local inv_ypage = 0x1E2A
 local inv_xpage = 0x1E3E
 local itype = 0x1892
 
---Ghost snake
-
+-- Ghost snake
 local ghosn_type = 0x17F0
 local ghosn_xbase = 0x1808
 local ghosn_xpage = 0x18EA
 local ghosn_ybase = 0x17FC
 local ghosn_ypage = 0x1814
 
---Ghost ship ghosts
-
+-- Ghost ship ghosts
 local ghosh_type = 0x1892
 local ghosh_xbase = 0x1E16
 local ghosh_xpage = 0x1E3E
 local ghosh_ybase = 0x1E02
 local ghosh_ypage = 0x1E2A
 
-
-
---Projectiles
+-- Projectiles
 local pxbase = 0x171F
 local pybase = 0x1715
 local pxpage = 0x1733
@@ -100,6 +126,8 @@ local function projectiles()
 	local yrad
 	local oend = 10
 	local pid
+	enemyX = {}
+	enemyY = {}
 	memory.usememorydomain("CARTROM")
 	for i = 0,oend,1 do
 
@@ -114,7 +142,7 @@ local function projectiles()
 			xrad = memory.read_u8(0x0124ff+pid)
 			yrad = memory.read_u8(0x01250b+pid)
 
-			gui.drawBox(x+xoff,y+yoff,x+xoff+xrad,y+yoff+yrad,0xFF000000,0x500000)
+			gui.drawBox(x+xoff, y+yoff, x+xoff+xrad, y+yoff+yrad, 0xFF000000, 0x500000)
 		end
 	end
 end
@@ -132,6 +160,10 @@ local function objects()
 	local outl
 	local objtype
 
+	enemiesCounter = 0
+	enemyX = {}
+	enemyY = {}
+
 	memory.usememorydomain("CARTROM")
 	for i = 0,oend,1 do
 
@@ -139,10 +171,10 @@ local function objects()
 
 		if mainmemory.read_u8(oactive + i) == 8 or mainmemory.read_u8(oactive + i) == 9 or mainmemory.read_u8(oactive +i) == 0xA then
 
-			objtype = mainmemory.read_u8(otype + i)
+			objtype = mainmemory.read_u8(OBJECT_TYPE_ADDRESS + i)
 			boxid = bit.band(mainmemory.read_u8(boxpointer+i),0x3F)
-			x = mainmemory.read_u8(exbase + i) + (mainmemory.read_u8(pagexbase + i) * 256) - mainmemory.read_u16_le(camx)
-			y = mainmemory.read_u8(eybase + i) + (mainmemory.read_u8(pageybase + i) * 256) - mainmemory.read_u16_le(camy)
+			x = mainmemory.read_u8(ENEMY_X_BASE_ADDRESS + i) + (mainmemory.read_u8(PAGE_X_BASE_ADDRESS + i) * 256) - mainmemory.read_u16_le(camx)
+			y = mainmemory.read_u8(ENEMY_y_BASE_ADDRESS + i) + (mainmemory.read_u8(PAGE_Y_BASE_ADDRESS + i) * 256) - mainmemory.read_u16_le(camy)
 			xoff = memory.read_s8(xoffbase + boxid)
 			yoff = memory.read_s8(yoffbase + boxid)
 			xrad = memory.read_u8(xradbase + boxid)
@@ -159,6 +191,7 @@ local function objects()
 			else
 				outl = 0xFFFF0000
 				fill = 0x30FF0000
+
 			end
 
 			if objtype == 0x29 then
@@ -170,10 +203,10 @@ local function objects()
 				end
 			end
 
-			--gui.text(x,y-5,string.format("%X",exbase + i))	-- Debug
-			--gui.text(x,y-5,string.format("%X",objtype))	-- Debug
-			--gui.text(x,y-5,xoff .. "/" .. xrad .. " " .. yoff .. "/" .. yrad) -- Debug
-			--gui.text(x,y-5,string.format("%X",mainmemory.read_u8(oactive + i))) -- Debug
+			gui.text(x, y-5,string.format("%X",ENEMY_X_BASE_ADDRESS + i))	-- Debug
+			gui.text(x, y-5,string.format("%X",objtype))	-- Debug
+			gui.text(x, y-5,xoff .. "/" .. xrad .. " " .. yoff .. "/" .. yrad) -- Debug
+			gui.text(x, y-5,string.format("%X",mainmemory.read_u8(oactive + i))) -- Debug
 			if objtype ~= 0x8C then
 				gui.drawBox(x+xoff,y+yoff,x+xoff+xrad,y+yoff+yrad,outl,fill)
 			end
@@ -236,9 +269,9 @@ local function invulns()
 end
 
 --------------------------------------------------
---
--- NOSSA PARTE
---
+--												--
+-- NOSSA PARTE									--
+--												--
 --------------------------------------------------
 
 -- Get tempo restante do level
@@ -252,8 +285,6 @@ local function get_level_time()
 
     local times = (100 * memory.read_u8(time_hundred) + 10 * memory.read_u8(time_dec) + memory.read_u8(time_unit))
 
-    gui.text(0,40, times)
-
     return times
 end
 
@@ -261,16 +292,17 @@ end
 --
 -- (distancia*peso1 + tempoRestante*peso2 ?(+ score*peso3) + lvlCleared)
 -- Objetivo: maximizar a funcao fitness
+
+weight1 = 0.8
+weight2 = 0.2
+clear = 1000
 local function fitness()
 
     memory.usememorydomain("System Bus")
 
-    local PLAYER_POS_ADRESS = 0x7E00D1
-    local player_posX = memory.read_u16_le(PLAYER_POS_ADRESS)
+    local player_posX = memory.read_u16_le(PLAYER_POS_ADDRESS)
 
-    gui.text(0,60, "Mario x: " .. player_posX)
-
-    return player_posX, get_level_time()
+    return player_posX*weight1 + get_level_time()*weight2 -- + score
 end
 
 local function print_buttons()
@@ -308,19 +340,24 @@ local function level_end()
 
     memory.usememorydomain("System Bus")
 
-    local TIMER_ADRESS = 0x7E13D6
+    clearBonus = 0
 
-    if (memory.read_u8(TIMER_ADRESS) == 0x49) then
+
+    if (memory.read_u8(TIMER_ADDRESS) == 0x49) then
+        clearBonus = 1000
         return true
     else
+    	clearBonus = 1000
         return false
     end
 end
 
 --verifica se esta morrendo
 function is_he_deaded_yet()
+	
 	memory.usememorydomain("System Bus")
-	if (memory.read_u8(mariostate) == 0x09) then
+	
+	if (memory.read_u8(PLAYER_STATE_ADDRESS) == 0x09) then
 			gui.text(0,20, "DEATH MY OLD FRIEND")
 			return true
 	end
@@ -332,6 +369,7 @@ end
 MAX_XIS = 0 --X maximo alcancado
 dumb_counter = 0 --contador de tempo pra ver se ele ta  avancando na fase
 LAST_GROUND = 0
+
 --ve se ele ta andando na fase
 function is_dumb()
 
@@ -365,9 +403,10 @@ end
 
 --verifica se o mehrio ta no chao
 function is_grounded()
+	
 	memory.usememorydomain("System Bus")
-	local GROUNDED_ADRESS = 0x7E0072
-	if (memory.read_u8(GROUNDED_ADRESS) == 0) then
+	
+	if (memory.read_u8(GROUNDED_ADDRESS) == 0) then
 		return true
 	else
 		return false
@@ -386,58 +425,142 @@ function get_tile(offset_X, offset_Y)
     local screenY = MARIO_YPSILON - memory.read_s16_le(0x1C)
     local off = 8
 
-    gui.drawBox(screenX+offset_X,screenY+offset_Y,screenX+offset_X+off,screenY+offset_Y+2*off,outl,fill)
+    gui.drawBox(screenX+offset_X, screenY+offset_Y, screenX+offset_X+off, screenY+offset_Y-off,outl,fill)
 
     -- gui.text(0, 150,(math.floor(x/0x10)*0x1B0).."  "..(y*0x10).."  "..(x%0x10)..".."..(0x1C800 + math.floor(x/0x10)*0x1B0 + y*0x10 + x%0x10))
     return memory.readbyte(0x1C800 + math.floor(x/0x10)*0x1B0 + y*0x10 + x%0x10)
 end
 
-emu.limitframerate(true)
+function is_hostile(key)
 
-Pop = 300
-MutationRate = 0.1
-MutationChance = 0.2
-CrossoverChance = 0.5
+	-- Enemies
+	if key == WIGGLER then
+		return true
+	end
+	if key >= KOOPA_SHELLS_START and key <= KOOPA_SHELLS_END then
+		return true
+	end
 
-weight1 = 0.8
-weight2 = 0.2
-clear = 1000
+	-- Other things
+	if key == YOSHI then
+		return false
+	end
+	if key == YOSHI_EGG then
+		return false
+	end
+	if key == BABY_YOSHI then
+		return false
+	end
+	if key == KEYHOLE then
+		return false
+	end
+	if key == UNUSED then
+		return false
+	end
+	if key == UNUSED2 then
+		return false
+	end
+	if key == LVL_MSG then
+		return false
+	end
+	if key == COIN then
+		return false
+	end
+	if key == P_SWITCH then
+		return false
+	end
+	if key == SPRINGBOARD then
+		return false
+	end
+	if key == THROW_BLOCK then
+		return false
+	end
+	if key >= TITLES_START and key <= TITLES_END then
+		return false
+	end
+	if key >= USELESS_START and key <= USELESS_END then
+		return false
+	end
+	if key >= PICKUP_START and key <= PICKUP_END then
+		return false
+	end
+	if key >= USELESS_2_START and key <= USELESS_2_END then
+		return false
+	end
 
-inputs = {Right = true}
-travelDistance = 0
-timeLeft = 0
+	return true
+end
 
-math.randomseed(os.time()) -- eh bom usar seed que nao fosse o tempo soh pa saber ql a seed
+function get_enemy(target_x, target_y)
+
+	memory.usememorydomain("CARTROM")
+
+	-- Enemy sprites X position start 0xE6
+	-- Enemy sprites Y position start 0xDA
+	-- Both have 8 slots
+
+	local enemyX
+	local enemyY
+	local objKey
+	local enemy_y_offset = 16
+	local oend = 20 -- ????
+
+	for i = 0, oend do
+
+		objKey = mainmemory.read_u8(OBJECT_TYPE_ADDRESS + i)
+
+		if is_hostile(objKey) then
+
+			enemyX = mainmemory.read_u8(ENEMY_X_BASE_ADDRESS + i) + (mainmemory.read_u8(PAGE_X_BASE_ADDRESS + i) * 256) - mainmemory.read_u16_le(camx)
+			enemyY = mainmemory.read_u8(ENEMY_y_BASE_ADDRESS + i) + (mainmemory.read_u8(PAGE_Y_BASE_ADDRESS + i) * 256) - mainmemory.read_u16_le(camy)
+		
+			gui.drawBox(enemyX, enemyY+enemy_y_offset, enemyX+16, enemyY+enemy_y_offset-24, 0xFFA000FF, 0x30A000FF)
+		end
+	end
+end
+
 
 --funaçoq ue retorn aleatoriamente um valor true ou false
 local function random_bool()
 	return (math.random(1, 10) > 5)
 end
 
-local max_generation =20
-local pop_size = 10
-local genoma_size = 1200
+SEED = os.time()
+math.randomseed(SEED)
 
+max_generation =20
+pop_size = 10
+genoma_size = 1200
 
 --criar a populaçao
 candidate = {}
 new_gene = {}
 
+function generate_gene()
+
+	gene = {}
+
+	gene.A = random_bool()
+	gene.B = random_bool()
+	gene.X = random_bool()
+	gene.Y = random_bool()
+	gene.Up = false --random_bool()
+	gene.Down = false --random_bool()
+	gene.Right = true --random_bool()
+	gene.Left = false --random_bool()
+
+	return gene
+end
+
 for i=1, pop_size do
+
     candidate[i] = {}
     candidate[i].genoma = {}
     candidate[i].fitness = 0.0
+
     for j=1, genoma_size do
-    	candidate[i].genoma[j] = {}
-    	--setando os botoes do controle
-    	candidate[i].genoma[j].A = random_bool()
-      candidate[i].genoma[j].B = random_bool()
-      candidate[i].genoma[j].X = random_bool()
-      candidate[i].genoma[j].Y = random_bool()
-      candidate[i].genoma[j].Up = false --random_bool()
-      candidate[i].genoma[j].Down = false --random_bool()
-      candidate[i].genoma[j].Right = true --random_bool()
-      candidate[i].genoma[j].Left = false --random_bool()
+
+		candidate[i].genoma[j] = generate_gene()
     end
 end
 
@@ -449,8 +572,16 @@ for i=1, pop_size do
 		--print(candidate[i].genoma[j].B)
 	end
 end]]
-print("JA ACABO, JESSICA?")
+
 savestate.save("savedajesscica.extensaoaki")
+
+--------------------------------------------------
+--												--
+-- MAIN SIMULATION LOOP							 --
+--												--
+--------------------------------------------------
+
+emu.limitframerate(true)
 
 --geraçao
 for	i=1, max_generation do
@@ -463,18 +594,34 @@ for	i=1, max_generation do
 		--fitnes do individuo rodando uma simulaçao
 
 		savestate.load("savedajesscica.extensaoaki")
-		print("individuo[",j,"]")
+		print("individuo[", j, "]")
+
 		while not fim do
-			--hue = math.random(0, 1)
 			mario()
-			objects()
-			invulns()
-			projectiles()
+			-- objects()
+			-- invulns()
+			-- projectiles()
+			
+			get_enemy()
 
 			get_level_time()
-	    print_buttons()
-			get_tile(32, 32)
-			fitness()
+	    	print_buttons()
+
+	    	-- Display time
+    	    gui.text(0,40, "Times left: " .. get_level_time())
+
+    	    -- Display position
+			gui.text(0,60, "Mario x: " .. memory.read_u16_le(PLAYER_POS_ADDRESS))
+
+    	    -- Rigid blocks getters
+			-- gui.text(10, 80, get_tile(32, 16))
+			-- gui.text(10, 100, get_tile(32, 30))
+			-- gui.text(10, 120, get_tile(32, 40))
+
+			-- Enemies getters
+			gui.text(30, 80, get_enemy(32, 16))
+			gui.text(30, 100, get_enemy(32, 30))
+			gui.text(30, 120, get_enemy(32, 40))
 
 			joypad.set(candidate[j].genoma[movimento], 1)
 
@@ -484,9 +631,7 @@ for	i=1, max_generation do
 
 			if (is_he_deaded_yet() or level_end()) then
 				fim = true
-				travelDistance, timeLeft = unpack{fitness()}
-				--gui.text(0, 80, travelDistance.."    "..timeLeft)
-					print("distancia percorrida =",travelDistance,"   tempo restante =", timeLeft)
+				fitneis = fitness()
 			end
 
 	    emu.frameadvance()
@@ -502,40 +647,3 @@ for	i=1, max_generation do
 
 	--reproduzir a populaçao
 end
-
------- dalse.... kd vc???
-
---[[while true do
-
-	-- load_state()
-
-    mario()
-    objects()
-    invulns()
-    projectiles()
-
-    get_level_time()
-    print_buttons()
-    get_tile()
-
-    marioState = 0x7E0071 -- ANIMATION 0x00 livre 0x09 - morrendo
-
-    -- 7E0100 - GAMESTATE http://www.smwiki.net/wiki/RAM_Address/$7E:0100
-    -- 7E13D6 - Timer de fim de fase (fica em 0x50 durante a fase toda)
-    memory.usememorydomain("System Bus")
-    if (memory.read_u8(marioState) == 0x09) then
-
-        gui.text(0,20, "DEATH MY OLD FRIEND")
-
-    	travelDistance, timeLeft = unpack{fitness()}
-    	-- fitness[i] = travelDistance*weight1 + timeLeft*weight2
-    end
-
-    if (level_end()) then
-    	gui.text(0, 20, "VC EH O BIXAO MERMO Q BLAZER")
-    	travelDistance, timeLeft = unpack{fitness()}
-    	-- fitness[i] = travelDistance*weight1 + timeLeft*weight2 + clear
-	end
-
-    emu.frameadvance()
-end]]
