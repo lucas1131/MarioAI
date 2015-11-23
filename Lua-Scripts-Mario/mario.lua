@@ -117,157 +117,6 @@ local function mario()
 	posy = y+yoff
 end
 
-local function projectiles()
-	local x
-	local y
-	local xoff
-	local yoff
-	local xrad
-	local yrad
-	local oend = 10
-	local pid
-	enemyX = {}
-	enemyY = {}
-	memory.usememorydomain("CARTROM")
-	for i = 0,oend,1 do
-
-		pid = mainmemory.read_u8(projtype + i)
-
-		if pid ~= 0 and pid ~= 0x12 then
-
-			x = mainmemory.read_u8(pxbase+i) + (mainmemory.read_u8(pxpage+i) * 256) - mainmemory.read_u16_le(camx)
-			y = mainmemory.read_u8(pybase+i) + (mainmemory.read_u8(pypage+i) * 256) - mainmemory.read_u16_le(camy)
-			xoff = memory.read_s8(0x0124e7+pid)
-			yoff = memory.read_s8(0x0124f3+pid)
-			xrad = memory.read_u8(0x0124ff+pid)
-			yrad = memory.read_u8(0x01250b+pid)
-
-			gui.drawBox(x+xoff, y+yoff, x+xoff+xrad, y+yoff+yrad, 0xFF000000, 0x500000)
-		end
-	end
-end
-
-local function objects()
-	local oend = 20
-	local x = 0
-	local y = 0
-	local boxid
-	local xoff
-	local yoff
-	local xrad
-	local yrad
-	local fill
-	local outl
-	local objtype
-
-	enemiesCounter = 0
-	enemyX = {}
-	enemyY = {}
-
-	memory.usememorydomain("CARTROM")
-	for i = 0,oend,1 do
-
-
-
-		if mainmemory.read_u8(oactive + i) == 8 or mainmemory.read_u8(oactive + i) == 9 or mainmemory.read_u8(oactive +i) == 0xA then
-
-			objtype = mainmemory.read_u8(OBJECT_TYPE_ADDRESS + i)
-			boxid = bit.band(mainmemory.read_u8(boxpointer+i),0x3F)
-			x = mainmemory.read_u8(ENEMY_X_BASE_ADDRESS + i) + (mainmemory.read_u8(PAGE_X_BASE_ADDRESS + i) * 256) - mainmemory.read_u16_le(camx)
-			y = mainmemory.read_u8(ENEMY_y_BASE_ADDRESS + i) + (mainmemory.read_u8(PAGE_Y_BASE_ADDRESS + i) * 256) - mainmemory.read_u16_le(camy)
-			xoff = memory.read_s8(xoffbase + boxid)
-			yoff = memory.read_s8(yoffbase + boxid)
-			xrad = memory.read_u8(xradbase + boxid)
-			yrad = memory.read_u8(yradbase + boxid)
-
-			--Yoshi
-			if objtype == 0x35 then
-				outl = 0xFF00FF37
-				fill = 0x3000FF37
-			-- Power pickups
-			elseif objtype >= 0x74 and objtype <= 0x81 then
-				outl = 0xFF00F2FF
-				fill = 0x3000F2FF
-			else
-				outl = 0xFFFF0000
-				fill = 0x30FF0000
-
-			end
-
-			if objtype == 0x29 then
-				xoff = -1 * 0x08
-				xrad = 0x10
-				yoff = 0x08
-				if mainmemory.read_u8(0x1602 + i) == 0x69 then
-					yoff = yoff + 0x0A
-				end
-			end
-
-			gui.text(x, y-5,string.format("%X",ENEMY_X_BASE_ADDRESS + i))	-- Debug
-			gui.text(x, y-5,string.format("%X",objtype))	-- Debug
-			gui.text(x, y-5,xoff .. "/" .. xrad .. " " .. yoff .. "/" .. yrad) -- Debug
-			gui.text(x, y-5,string.format("%X",mainmemory.read_u8(oactive + i))) -- Debug
-			if objtype ~= 0x8C then
-				gui.drawBox(x+xoff,y+yoff,x+xoff+xrad,y+yoff+yrad,outl,fill)
-			end
-		end
-	end
-end
-
-local function invulns()
-
-	local oend = 20
-	local page = 0
-	local boxid
-	local x
-	local y
-	local xoff
-	local yoff
-	local xrad
-	local yrad
-	memory.usememorydomain("CARTROM")
-	--Ghost rings/Ghost house
-	for i = 0,oend,1 do
-			if mainmemory.read_u8(itype + i) == 0x04 or mainmemory.read_u8(itype + i) == 0x03 then
-				x = mainmemory.read_u8(inv_xbase + i) + (mainmemory.read_u8(inv_xpage + i) * 256) - mainmemory.read_u16_le(camx)
-				y = mainmemory.read_u8(inv_ybase + i) + (mainmemory.read_u8(inv_ypage + i) * 256) - mainmemory.read_u16_le(camy)
-				xoff = 2
-				xrad = 12
-				yoff = 3
-				yrad = 10
-				gui.drawBox(x+xoff,y+yoff,x+xoff+xrad,y+yoff+yrad,0xFFFFFF00,0x30FFFF00)
-			end
-	end
-
-	--Sunken ship ghosts
-
-	for i = 0,oend,1 do
-		if mainmemory.read_u8(ghosh_type +i) ~= 0 then
-			x = mainmemory.read_u8(ghosh_xbase + i) + (mainmemory.read_u8(ghosh_xpage +i) * 256) - mainmemory.read_u16_le(camx)
-			y = mainmemory.read_u8(ghosh_ybase + i) + (mainmemory.read_u8(ghosh_ypage +i) * 256) - mainmemory.read_u16_le(camy)
-			xoff = 2
-			xrad = 12
-			yoff = 3
-			yrad = 10
-			gui.drawBox(x+xoff,y+yoff,x+xoff+xrad,y+yoff+yrad,0xFFFFFF00,0x30FFFF00)
-		end
-	end
-
-	--Ghost Snake
-	oend = 12
-	for i = 0,oend,1 do
-		if mainmemory.read_u8(ghosn_type+i) ~= 0 then
-			x = mainmemory.read_u8(ghosn_xbase + i) + (mainmemory.read_u8(ghosn_xpage +i) * 256) - mainmemory.read_u16_le(camx)
-			y = mainmemory.read_u8(ghosn_ybase + i) + (mainmemory.read_u8(ghosn_ypage +i) * 256) - mainmemory.read_u16_le(camy)
-			xoff = 2
-			xrad = 12
-			yoff = 3
-			yrad = 10
-			gui.drawBox(x+xoff,y+yoff,x+xoff+xrad,y+yoff+yrad,0xFFFFFF00,0x30FFFF00)
-		end
-	end
-end
-
 --------------------------------------------------
 --												--
 -- NOSSA PARTE									--
@@ -425,7 +274,7 @@ function get_tile(offset_X, offset_Y)
     local screenY = MARIO_YPSILON - memory.read_s16_le(0x1C)
     local off = 8
 
-    gui.drawBox(screenX+offset_X, screenY+offset_Y, screenX+offset_X+off, screenY+offset_Y-off,outl,fill)
+    gui.drawBox(screenX+offset_X, screenY+offset_Y, screenX+offset_X+off, screenY+offset_Y-off, 0xFFFFFFFF, 0x45FFFFFF)
 
     -- gui.text(0, 150,(math.floor(x/0x10)*0x1B0).."  "..(y*0x10).."  "..(x%0x10)..".."..(0x1C800 + math.floor(x/0x10)*0x1B0 + y*0x10 + x%0x10))
     return memory.readbyte(0x1C800 + math.floor(x/0x10)*0x1B0 + y*0x10 + x%0x10)
@@ -493,17 +342,23 @@ end
 
 function get_enemy(target_x, target_y)
 
+	memory.usememorydomain("WRAM")
+	local screenX = MARIO_XIS - memory.read_s16_le(0x1A)
+	local screenY = MARIO_YPSILON - memory.read_s16_le(0x1C)
 	memory.usememorydomain("CARTROM")
-
-	-- Enemy sprites X position start 0xE6
-	-- Enemy sprites Y position start 0xDA
-	-- Both have 8 slots
 
 	local enemyX
 	local enemyY
 	local objKey
-	local enemy_y_offset = 16
+
+	local offset = 16
+	local yoffset1 = 12
+	local yoffset2 = 16
 	local oend = 20 -- ????
+    local off = 8
+    
+    -- gui.drawBox(screenX+target_x, screenY+target_y, screenX+target_x+off, screenY+target_y-off, 0xFFFF0000, 0x30FFFFFF)
+    gui.drawBox(screenX+target_x, screenY+target_y, screenX+target_x+off, screenY+target_y-off, 0xFFFFA0A0, 0x45FFA0A0)
 
 	for i = 0, oend do
 
@@ -513,12 +368,21 @@ function get_enemy(target_x, target_y)
 
 			enemyX = mainmemory.read_u8(ENEMY_X_BASE_ADDRESS + i) + (mainmemory.read_u8(PAGE_X_BASE_ADDRESS + i) * 256) - mainmemory.read_u16_le(camx)
 			enemyY = mainmemory.read_u8(ENEMY_y_BASE_ADDRESS + i) + (mainmemory.read_u8(PAGE_Y_BASE_ADDRESS + i) * 256) - mainmemory.read_u16_le(camy)
-		
-			gui.drawBox(enemyX, enemyY+enemy_y_offset, enemyX+16, enemyY+enemy_y_offset-24, 0xFFA000FF, 0x30A000FF)
+			
+			gui.drawBox(enemyX, enemyY-yoffset1, enemyX+offset, enemyY+yoffset2, 0xFF6e002d, 0x106e002d)
+			-- 0000 0000 - Alpha channel (bit 24)
+			-- 0000 0000 - Red channel (bit 16)
+			-- 0000 0000 - Green channel (bit 8)
+			-- 0000 0000 - Blue channel (bit 0)
+
+			if (screenX+target_x >= enemyX) and (screenX+target_x <= enemyX+offset) and
+			   (screenY+target_y >= enemyY-yoffset1) and (screenY+target_y <= enemyY+yoffset2) then
+			   	return 1
+			end
 		end
 	end
+	return 0
 end
-
 
 --funaçoq ue retorn aleatoriamente um valor true ou false
 local function random_bool()
@@ -573,6 +437,7 @@ for i=1, pop_size do
 	end
 end]]
 
+savestate.load("savedajesscica.extensaoaki")
 savestate.save("savedajesscica.extensaoaki")
 
 --------------------------------------------------
@@ -598,12 +463,6 @@ for	i=1, max_generation do
 
 		while not fim do
 			mario()
-			-- objects()
-			-- invulns()
-			-- projectiles()
-			
-			get_enemy()
-
 			get_level_time()
 	    	print_buttons()
 
@@ -614,14 +473,26 @@ for	i=1, max_generation do
 			gui.text(0,60, "Mario x: " .. memory.read_u16_le(PLAYER_POS_ADDRESS))
 
     	    -- Rigid blocks getters
-			-- gui.text(10, 80, get_tile(32, 16))
-			-- gui.text(10, 100, get_tile(32, 30))
-			-- gui.text(10, 120, get_tile(32, 40))
+			gui.text(10, 80,  get_tile(32, 0	))
+			gui.text(10, 100, get_tile(32, 24	))
+			gui.text(10, 120, get_tile(32, 48	))
+			gui.text(30, 80,  get_tile(64, 0	))
+			gui.text(30, 100, get_tile(64, 24	))
+			gui.text(30, 120, get_tile(64, 48	))
+			gui.text(50, 80,  get_tile(96, 0	))
+			gui.text(50, 100, get_tile(96, 24	))
+			gui.text(50, 120, get_tile(96, 48	))
 
 			-- Enemies getters
-			gui.text(30, 80, get_enemy(32, 16))
-			gui.text(30, 100, get_enemy(32, 30))
-			gui.text(30, 120, get_enemy(32, 40))
+			gui.text(10, 150, get_enemy(32, 0	))
+			gui.text(10, 170, get_enemy(32, 24	))
+			gui.text(10, 190, get_enemy(32, 48	))
+			gui.text(30, 150, get_enemy(64, 0	))
+			gui.text(30, 170, get_enemy(64, 24	))
+			gui.text(30, 190, get_enemy(64, 48	))
+			gui.text(50, 150, get_enemy(96, 0	))
+			gui.text(50, 170, get_enemy(96, 24	))
+			gui.text(50, 190, get_enemy(96, 48	))
 
 			joypad.set(candidate[j].genoma[movimento], 1)
 
