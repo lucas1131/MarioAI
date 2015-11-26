@@ -303,6 +303,16 @@ local function print_buttons()
     end
 end
 
+local function get_score()
+
+    memory.usememorydomain("WRAM")
+
+    local low_bytes = memory.read_u16_le(SCORE_ADDRESS)
+    local high_bytes = memory.readbyte(SCORE_ADDRESS+2)
+
+    return bit.lshift(high_bytes, 16) + low_bytes
+end
+
 -- Verifica se chegou no fim da fase
 local function level_end()
 
@@ -337,30 +347,40 @@ function is_dumb()
 
 	if (MARIO_XIS > MAX_XIS) then	--se tiver andando ta deboas
 		MAX_XIS = MARIO_XIS
+		dumb_counter = 0
 	else
 		--se ele estiver mudando de altura ta deboas
-		if (is_grounded()) then
-			if (MARIO_YPSILON ~= LAST_GROUND) then
+		if (is_grounded() and (MARIO_YPSILON ~= LAST_GROUND)) then
 				LAST_GROUND = MARIO_YPSILON
 				dumb_counter = 0
-			else
+		else
 
-				--se nao tiver de boas roda o contador
-				if (dumb_counter > 0) then
-					if (emu.framecount()%60 == 0) then
-						dumb_counter = dumb_counter - 1
-						if (dumb_counter == 0) then
-							return true
-						end
+			--se nao tiver de boas roda o contador
+			if (dumb_counter > 0) then
+				if (emu.framecount()%60 == 0) then
+					dumb_counter = dumb_counter - 1
+					if (dumb_counter == 0) then
+						return true
 					end
-				else
-					dumb_counter = 4 --segundos de esperteza
 				end
+			else
+				dumb_counter = 5 --segundos de esperteza
 			end
 		end
 	end
 
 	return false
+end
+
+--verifica se o mehrio ta no chao
+function is_grounded()
+	memory.usememorydomain("System Bus")
+	local GROUNDED_ADRESS = 0x7E0072
+	if (memory.read_u8(GROUNDED_ADRESS) == 0) then
+		return true
+	else
+		return false
+	end
 end
 
 --verifica se o mehrio ta no chao
@@ -392,98 +412,171 @@ function get_tile(offset_X, offset_Y)
     return memory.readbyte(0x1C800 + math.floor(x/0x10)*0x1B0 + y*0x10 + x%0x10)
 end
 
-emu.limitframerate(true)
+emu.limitframerate(false)
 
-MutationRate = 10
-MutationChance = 20
-CrossoverChance = 0.5
-
-weight1 = 0.8
-weight2 = 0.2
+MutationSize = 5
+mutation_chance = 20
+local_mutation_size =1 -- ignora esse valor so to declarando
+local_mutation_range = 10 -- o tamano da mutaçao pode ser de 1 gene até esse valor
 
 travelDistance = 0
 timeLeft = 0
 
-max_generation =20
-pop_size = 20
-genoma_size = 1200
+max_generation =400
+pop_size = 1
+genoma_size = 500
 
+seed = os.time() 
+math.randomseed(seed) -- eh bom usar seed que nao fosse o tempo soh pa saber ql a seed
 
-math.randomseed(os.time()) -- eh bom usar seed que nao fosse o tempo soh pa saber ql a seed
-
+file = io.open("mario_seed.txt" ,"a")
+io.input("mario_seed.txt")
 function print_pop()
 	for i=1,pop_size do
-		print("candidate[",i,"].fitness=",candidate[i].fitness)
+		print("candidate[",i,"].fitness=",candidate[i].fitness,"\n\tmutatio_point=",candidate[i].mutation_point)
 	end
 end
-
 
 --funçao que retorna aleatoriamente um valor true ou false
 local function random_bool()
-	return (math.random(1, 10) > 5)
+	return (math.random(0, 1) == 1 )
 end
 
-local function Select_population_and_Hittler( )
-	local mother
-	local father
-	for i = pop_size*0.2, pop_size do
-		--selecioanndo os pais
-		mother = math.random(1,0.2*pop_size)
-		father = math.random(1,0.2*pop_size)
-		--intercalando os genes dos pais no filho
-		for j=1,genoma_size do
-			if (random_bool()) then
-				candidate[i].genoma[j] = candidate[mother].genoma[j]
-			else 
-				candidate[i].genoma[j] = candidate[father].genoma[j]
-			end
+function generate_gene()
+
+    gene = {}
+
+    gene.A = random_bool()
+    gene.B = random_bool()
+    gene.X = random_bool()
+    gene.Y = random_bool()
+    gene.Up = false --random_bool()
+    gene.Down = random_bool()
+    gene.Right = true --random_bool()
+    gene.Left = false --random_bool()
+
+    return gene
+end
+
+local function Finding_Messias( )
+	candidate[2].fitness = candidate[1].fitness
+	for j=1, genoma_size do
+		candidate[2].genoma[j] = candidate[1].genoma[j]
+	end	
+
+	local_mutation_size = math.random(1,local_mutation_range)
+	if(candidate[1].mutation_point > local_mutation_size )then
+		--mutaçao local
+		for j= candidate[1].mutation_point -local_mutation_size ,candidate[1].mutation_point  do	
+			candidate[1].genoma[j] = {}
+			candidate[1].genoma[j] = generate_gene()
 		end
-		--mutaçao
-		if(math.random(1,100) < MutationChance) then
-			for j=1,genoma_size do
-				if (math.random(1,100) < MutationRate) then
-					candidate[i].genoma[j].A = random_bool()
-					candidate[i].genoma[j].B = random_bool()
-					candidate[i].genoma[j].X = random_bool()
-					candidate[i].genoma[j].Y = random_bool()
-					candidate[i].genoma[j].Up = random_bool()
-					candidate[i].genoma[j].Down = random_bool()
-					candidate[i].genoma[j].Right = random_bool()
-					candidate[i].genoma[j].Left = random_bool()
-				end
-			end
+	else
+		--se ele morrer muito no começo
+		for j= 1 ,candidate[1].mutation_point do	
+			candidate[1].genoma[j] = {}
+			candidate[1].genoma[j] = generate_gene()
 		end
 	end
 end
 
+local function breed_population( )
+    local offspring = {}
+    local k = 1
+    local mother
+    local father
+
+    --elitism
+    for i = 1, pop_size do
+        offspring[i] = {}
+        offspring[i].genoma = {}
+        for j = 1, genoma_size do
+            --setando os botoes do controle
+            offspring[i].genoma[j] = {}
+            offspring[i].genoma[j] = candidate[i].genoma[j]
+        end 
+    end
+
+    for i = 0.1*pop_size, pop_size do
+        mother = math.random(1, pop_size)
+        father = math.random(1, pop_size)
+
+        -- Crossover
+        for j = 1, genoma_size do
+            if(random_bool())then
+                candidate[i].genoma[j] = offspring[mother].genoma[j]
+            else
+                candidate[i].genoma[j] = offspring[father].genoma[j]
+            end
+        end
+
+        if(math.random(1, 100) < mutation_chance) then
+            for j = 1, genoma_size do
+                if (math.random(1, 100) < MutationSize) then
+                    candidate[i].genoma[j] = generate_gene()
+                end
+            end
+        end
+        candidate[i].mutation_point = -1
+    end
+
+    for i = pop_size*0.1, pop_size do
+        offspring[i] = candidate[k]
+        k = k + 1
+    end
+
+	print("Depois da orgia, çequissu selvagem")
+	for i=1, 0.2*pop_size do
+		print("candidate[",i,"].fitness=",candidate[i].fitness)
+	end
+
+    return offspring
+end
+
+local function generate_messias_chuildren()
+	pop_size = 20
+	--gerando os filhos do Messias
+	for i=2, pop_size do
+	    candidate[i] = {}
+	    candidate[i].genoma = {}
+	    candidate[i].fitness = 0.0
+	    candidate[i].mutation_point= -1
+	    for j=1, genoma_size do
+	    	candidate[i].genoma[j] = {}
+	    	if(math.random(1,100) > MutationSize) then
+	    		candidate[i].genoma[j] = candidate[i].genoma[j]
+	    	else
+	    		candidate[i].genoma[j] = generate_gene()
+			end
+	    end
+	end
+end
 
 --criar a populaçao
 candidate = {}
-new_gene = {}
-
-for i=1, pop_size do
-    candidate[i] = {}
-    candidate[i].genoma = {}
-    candidate[i].fitness = 0.0
-    for j=1, genoma_size do
-    candidate[i].genoma[j] = {}
-    	--setando os botoes do controle
-    candidate[i].genoma[j].A = random_bool()
-	candidate[i].genoma[j].B = random_bool()
-	candidate[i].genoma[j].X = random_bool()
-	candidate[i].genoma[j].Y = random_bool()
-	candidate[i].genoma[j].Up = random_bool()
-	candidate[i].genoma[j].Down = random_bool()
-	candidate[i].genoma[j].Right = random_bool()
-	candidate[i].genoma[j].Left = random_bool()
-    end
+local function create_Messias()
+	for i=1, 2 do
+	    candidate[i] = {}
+	    candidate[i].genoma = {}
+	    candidate[i].fitness = 0.0
+	    candidate[i].mutation_point = -1
+	    for j=1, genoma_size do
+	    	candidate[i].genoma[j] = {}
+	    	candidate[i].genoma[j] = generate_gene()
+	    end
+	end
 end
 
 print("JA ACABO, JESSICA?")
-savestate.save("savedajesscica.extensaoaki")
+savestate.save("savedajesscica.extensaoaki") 
 
 weight1=0.8
 weight2=0.2
+weight3=0.3
+
+found_messia = false
+
+create_Messias()
 
 --geraçao
 for	i=1, max_generation do
@@ -494,15 +587,12 @@ for	i=1, max_generation do
 		---quanicagesimo setimo filho sera dalse
 		fim = false
 		--fitnes do individuo rodando uma simulaçao
-
 		savestate.load("savedajesscica.extensaoaki")
 		while not fim do
-			--hue = math.random(0, 1)
 			mario()
 			objects()
 			invulns()
 			projectiles()
-
 			get_level_time()
 	    	print_buttons()
 			get_tile(32, 32)
@@ -514,19 +604,27 @@ for	i=1, max_generation do
 				movimento = movimento + 1
 			end
 
+			--- if fim de simulaçao
 			if (is_dumb() or is_he_deaded_yet() or level_end()) then
 				fim = true
 				travelDistance, timeLeft = unpack{fitness()}
-				candidate[j].fitness = weight1 * travelDistance + weight2 * timeLeft
+				candidate[j].fitness = weight1 * travelDistance + weight2 * timeLeft-- + weight3 * get_score()
+				MAX_XIS = 0 --X maximo alcancado
+				dumb_counter = 0 --contador de tempo pra ver se ele ta  avancando na fase
+				LAST_GROUND = 0
 				if(level_end())then
 					candidate[j].fitness = candidate[j].fitness + 1000---bonus por termianr o level
+					--cria a populaçao em baze o gene do messia uma unica vez
+					if(not found_messia) then
+						generate_messias_chuildren()
+					end
+					found_messia = true
+				else 
+					candidate[j].mutation_point = movimento
 				end
-
-				--gui.text(0, 80, travelDistance.."    "..timeLeft)
 			end
 	   		emu.frameadvance()
 		end		
-		
 	end
 	--selecionar a populaçao
 	table.sort(candidate, function ( a,b )
@@ -534,9 +632,14 @@ for	i=1, max_generation do
 	end)
 	print("========GENARATION", i, "==================")
 	print_pop()
-	Select_population_and_Hittler()
-
+	if(not found_messia) then 
+		Finding_Messias()
+	else  
+		breed_population()
+	end
 	--reproduzir a populaçao
 end
-
 ------ dalse.... kd vc???
+io.write("seed:",seed,"best fitness:",candidate[0].fitness)
+
+io.close("mario_seed.txt")
