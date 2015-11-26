@@ -57,6 +57,9 @@ local pxpage = 0x1733
 local pypage = 0x1729
 local projtype = 0x170B
 
+-- por ai
+local SCORE_ADDRESS = 0x7E0F34
+
 
 local function mario()
 	local x
@@ -305,7 +308,7 @@ end
 
 local function get_score()
 
-    memory.usememorydomain("WRAM")
+    memory.usememorydomain("System Bus")
 
     local low_bytes = memory.read_u16_le(SCORE_ADDRESS)
     local high_bytes = memory.readbyte(SCORE_ADDRESS+2)
@@ -383,17 +386,6 @@ function is_grounded()
 	end
 end
 
---verifica se o mehrio ta no chao
-function is_grounded()
-	memory.usememorydomain("System Bus")
-	local GROUNDED_ADRESS = 0x7E0072
-	if (memory.read_u8(GROUNDED_ADRESS) == 0) then
-		return true
-	else
-		return false
-	end
-end
-
 -- Get se o title no offset (x, y) e rigido ou nao
 function get_tile(offset_X, offset_Y)
 
@@ -422,7 +414,7 @@ local_mutation_range = 10 -- o tamano da mutaçao pode ser de 1 gene até esse v
 travelDistance = 0
 timeLeft = 0
 
-max_generation =400
+max_generation =10
 pop_size = 1
 genoma_size = 500
 
@@ -544,7 +536,7 @@ local function generate_messias_chuildren()
 	    for j=1, genoma_size do
 	    	candidate[i].genoma[j] = {}
 	    	if(math.random(1,100) > MutationSize) then
-	    		candidate[i].genoma[j] = candidate[i].genoma[j]
+	    		candidate[i].genoma[j] = candidate[1].genoma[j]
 	    	else
 	    		candidate[i].genoma[j] = generate_gene()
 			end
@@ -570,9 +562,9 @@ end
 print("JA ACABO, JESSICA?")
 savestate.save("savedajesscica.extensaoaki") 
 
-weight1=0.8
-weight2=0.2
-weight3=0.3
+weight1 = 0.5
+weight2 = 0.2
+weight3 = 0.3
 
 found_messia = false
 
@@ -608,7 +600,8 @@ for	i=1, max_generation do
 			if (is_dumb() or is_he_deaded_yet() or level_end()) then
 				fim = true
 				travelDistance, timeLeft = unpack{fitness()}
-				candidate[j].fitness = weight1 * travelDistance + weight2 * timeLeft-- + weight3 * get_score()
+				print("score:", get_score())
+				candidate[j].fitness = weight1 * travelDistance + weight2 * timeLeft + weight3 * get_score()
 				MAX_XIS = 0 --X maximo alcancado
 				dumb_counter = 0 --contador de tempo pra ver se ele ta  avancando na fase
 				LAST_GROUND = 0
@@ -640,6 +633,6 @@ for	i=1, max_generation do
 	--reproduzir a populaçao
 end
 ------ dalse.... kd vc???
-io.write("seed:",seed,"best fitness:",candidate[0].fitness)
+io.write("seed:",seed,"best fitness:",candidate[1].fitness)
 
 io.close("mario_seed.txt")
