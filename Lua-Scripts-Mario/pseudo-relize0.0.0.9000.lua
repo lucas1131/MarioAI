@@ -528,7 +528,7 @@ function display_status()
 	gui.text(0, 40, "Times left: " .. get_level_time())
 	gui.text(0, 60, "Mario x: " .. memory.read_u16_le(PLAYER_POS_ADDRESS))
 	gui.text(0, 80, "Score: " .. get_score())
-	-- gui.text(0, 100, "Gen: " .. )
+	print_buttons()
 end
 
 -- Fitness weights
@@ -607,7 +607,6 @@ for	i = 1, max_generation do
 		while not fim do
 
 			get_mario_pos()
-		    -- print_buttons()
 
 		    -- display_status()
 
@@ -635,6 +634,8 @@ for	i = 1, max_generation do
 					candidate[j].mutation_point = movimento
 				end
 			end
+
+			-- Desenha os olhos sem ficar fazendo checagem (performance)
 			-- memory.usememorydomain("WRAM")
 			-- local screenX = MARIO_XIS - memory.read_s16_le(0x1A)
 			-- local screenY = MARIO_YPSILON - memory.read_s16_le(0x1C)
