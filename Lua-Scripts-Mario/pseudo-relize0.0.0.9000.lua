@@ -564,7 +564,7 @@ math.randomseed(seed) -- eh bom usar seed que nao fosse o tempo soh pa saber ql 
 -- Database var
 path = "mario_seed.txt"
 file = io.open(path, "a")
-file:write("seed: " .. seed)
+file:write("seed: " .. seed .. "\n")
 file:close()
 
 -- Dar load em save slot tende a buggar o emulador
