@@ -103,7 +103,6 @@ function is_he_deaded_yet()
 	memory.usememorydomain("System Bus")
 
 	if (memory.read_u8(PLAYER_STATE_ADDRESS) == 0x09) then
-			-- gui.text(0,20, "DEATH MY OLD FRIEND")
 			return true
 	end
 
@@ -319,7 +318,7 @@ function should_move()
 
 	-- Wtf esses ifs?
 
-	if  (get_tile(32, -8) == 1) or (get_tile(32, 16) == 1) or (get_tile(32, 40) == 0) or
+	if (get_tile(32, -8) == 1) or (get_tile(32, 16) == 1) or (get_tile(32, 40) == 0) or
 	(get_tile(64, -8) == 1) or (get_tile(64, 16) == 1) or (get_tile(64, 40) == 0) or
 	(get_tile(96, -8) == 1) or (get_tile(96, 16) == 1) or (get_tile(96, 40) == 0) then
 		return true
@@ -334,15 +333,197 @@ function should_move()
 	return false
 end
 
+function FSM(genoma)
+
+	index = 0
+	state = 0
+
+	local ground_eye = {}
+
+	ground_eye1 = get_tile(32, -8)
+	ground_eye4 = get_tile(32, 24)
+	ground_eye5 = get_tile(64, 24)
+
+	-- Eyes pattern
+	--
+	-- [1] [2] [3]
+	-- [4] [5] [6]
+	-- [7] [8] [9]
+	--
+	-- Enemies have priority over ground
+
+	-- Enemy Eyes
+	-- Eye[1]
+	if get_enemy(32, 0) == 1 then 
+	
+		index = 1
+		state = 1
+		return genoma.enemy[1]
+	
+	-- Eye[2]
+	elseif get_enemy(64, 0) == 1 then
+	
+		index = 2
+		state = 1
+		return genoma.enemy[2]
+	
+	-- Eye[3]
+	elseif get_enemy(96, 0) == 1 then
+	
+		index = 3
+		state = 1
+		return genoma.enemy[3]
+	
+	-- Eye[4]
+	elseif get_enemy(32, 24) == 1 then
+	
+		index = 4
+		state = 1
+		return genoma.enemy[4]
+	
+	-- Eye[5]
+	elseif get_enemy(64, 24) == 1 then
+	
+		index = 5
+		state = 1
+		return genoma.enemy[5]
+	
+	-- Eye[6]
+	elseif get_enemy(96, 24) == 1 then
+	
+		index = 6
+		state = 1
+		return genoma.enemy[6]
+	
+	-- Eye[7]
+	elseif get_enemy(32, 48) == 1 then
+	
+		index = 7
+		state = 1
+		return genoma.enemy[7]
+	
+	-- Eye[8]
+	elseif get_enemy(64, 48) == 1 then
+	
+		index = 8
+		state = 1
+		return genoma.enemy[8]
+	
+	-- Eye[9]
+	elseif get_enemy(96, 48) == 1 then
+	
+		index = 9
+		state = 1
+		return genoma.enemy[9]
+
+	-- Ground Eyes
+	-- Eye[1] && Eye[4]
+	elseif ground_eye1 == 1 and ground_eye5 == 1 then
+
+		index = 11
+		state = 2
+		return genoma.ground[11]
+
+	-- Eye[4] && Eye[5]
+	elseif ground_eye4 == 1 and ground_eye5 == 1 then
+
+		index = 10
+		state = 2
+		return genoma.ground[10]
+
+	-- Eye[1]
+	elseif ground_eye1 == 1 then
+	
+		index = 1
+		state = 2
+		return genoma.ground[1]
+	
+	-- Eye[2]
+	elseif get_tile(64, -8) == 1 then
+	
+		index = 2
+		state = 2
+		return genoma.ground[2]
+	
+	-- Eye[3]
+	elseif get_tile(96, -8) == 1 then
+	
+		index = 3
+		state = 2
+		return genoma.ground[3]
+	
+	-- Eye[4]
+	elseif ground_eye4 == 1 then
+	
+		index = 4
+		state = 2
+		return genoma.ground[4]
+	
+	-- Eye[5]
+	elseif ground_eye5 == 1 then
+	
+		index = 5
+		state = 2
+		return genoma.ground[5]
+	
+	-- Eye[6]
+	elseif get_tile(96, 24) == 1 then
+	
+		index = 6
+		state = 2
+		return genoma.ground[6]
+	
+	-- Eye[7]
+	elseif get_tile(32, 40) == 0 then
+	
+		index = 7
+		state = 2
+		return genoma.ground[7]
+	
+	-- Eye[8]
+	elseif get_tile(64, 40) == 0 then
+	
+		index = 8
+		state = 2
+		return genoma.ground[8]
+	
+	-- Eye[9]
+	elseif get_tile(96, 40) == 0 then
+	
+		index = 9
+		state = 2
+		return genoma.ground[9]
+
+	else
+		return genoma.default[movimento]
+	end
+end
+
 --funaçoq ue retorn aleatoriamente um valor true ou false
 function random_bool()
 
 	return (math.random(1, 10) > 5)
 end
 
+function debug_fsm()
+
+	local gene = {}
+
+	gene.A = false
+	gene.B = false
+	gene.X = true
+	gene.Y = true
+	gene.Up = false
+	gene.Down = false
+	gene.Right = true
+	gene.Left = false
+
+	return gene
+end
+
 function generate_gene()
 
-	gene = {}
+	local gene = {}
 
 	gene.A = random_bool()
 	gene.B = random_bool()
@@ -356,6 +537,79 @@ function generate_gene()
 	return gene
 end
 
+function generate_genoma()
+
+	local genoma = {}
+	genoma.ground = {}
+	genoma.enemy = {}
+	genoma.default = {}
+
+	for i = 1, 20 do
+		genoma.ground[i] = {}
+		genoma.enemy[i] = {}
+
+		genoma.ground[i] = generate_gene()
+		genoma.enemy[i] = generate_gene()
+	end
+
+	for i = 1, genoma_size do
+    	genoma.default[i] = {}
+    	genoma.default[i] = generate_gene()
+    	-- genoma.default[i] = debug_fsm()
+    end
+
+    return genoma
+end
+
+function mutate_gene(gene)
+
+	local l_gene = gene
+
+	if math.random() < mutation_chance then
+		l_gene.A = random_bool()
+	end
+
+	if math.random() < mutation_chance then
+		l_gene.B = random_bool()
+	end
+
+	if math.random() < mutation_chance then
+		l_gene.X = random_bool()
+	end
+
+	if math.random() < mutation_chance then
+		l_gene.Y = random_bool()
+	end
+
+	if math.random() < mutation_chance then
+		l_gene.Up = random_bool()
+	end
+
+	if math.random() < mutation_chance then
+		l_gene.Down = random_bool()
+	end
+
+	if math.random() < mutation_chance then
+		l_gene.Left = random_bool()
+	end
+
+	if math.random() < mutation_chance then
+		l_gene.Right = random_bool()
+	end
+
+	return l_gene
+end
+
+function local_state_mutation(genoma)
+
+	if state == 1 then
+		genoma.enemy[index] = mutate_gene(genoma.enemy[index])
+	elseif state == 2 then
+		genoma.ground[index] = mutate_gene(genoma.ground[index])
+	end
+
+end
+
 function print_pop()
 	for i = 1, pop_size do
 		print("candidate[",i,"].fitness=",candidate[i].fitness)
@@ -365,43 +619,56 @@ end
 -- criar a populaçao inicial que é composta por 2 individuos 
 -- um que sera o individuo que ficara sendo testado e outra que sera 
 -- guardado o melhor individuo produzido até entao
-
 function create_Messiah()
-	for i=1, 2 do
-	    candidate[i] = {}
-	    candidate[i].genoma = {}
-	    candidate[i].fitness = 0.0
-	    candidate[i].mutation_point = -1
-	    for j=1, genoma_size do
-	    	candidate[i].genoma[j] = {}
-	    	candidate[i].genoma[j] = generate_gene()
-	    end
-	end
+
+	candidate[1] = {}
+    candidate[1].fitness = 0.0
+    candidate[1].mutation_point = -1
+    candidate[1].genoma = {}
+    candidate[1].genoma = generate_genoma()
+
+    candidate[2] = {}
+    candidate[2].fitness = 0.0
+    candidate[2].mutation_point = -1
+    candidate[2].genoma = {}
+    candidate[2].genoma = generate_genoma()
 end
 
 -- Funçao que ira achar o individuo modelo, onde o individuo 
 -- de melhor fitness sempre sera guardado e o novo individuo é uma 
 -- mutaçao do melhor individuo,
-
 function Finding_Messiah()
 
 	-- Guardando o primeiro individuo no segundo, pois o primeiro é melhor
-	candidate[2] = candidate[10]	
+	candidate[2] = candidate[1]
 	
 	-- Fazendo a "mutaçao local" que seria a mutaçao no nos genes perto do gene que fez com que o mario """"""""""morresse"""""" <- é assim que escreve
-	local local_mutation_size = math.random(1,local_mutation_range)
+	local local_mutation_size = math.random(1, local_mutation_range)
 	if(candidate[1].mutation_point > local_mutation_size) then
 		
 		-- Mutaçao local
 		for j = candidate[1].mutation_point - local_mutation_size, candidate[1].mutation_point do
-			candidate[1].genoma[j] = {}
-			candidate[1].genoma[j] = generate_gene()
+			candidate[1].genoma.default[j] = {}
+			candidate[1].genoma.default[j] = generate_gene()
+			-- candidate[1].genoma.default[j] = debug_fsm()
 		end
 	else
 		-- Se ele morrer muito no começo mutar todos os gene do começo até o ponto de mutaçao
 		for j = 1, candidate[1].mutation_point do
-			candidate[1].genoma[j] = {}
-			candidate[1].genoma[j] = generate_gene()
+			candidate[1].genoma.default[j] = {}
+			candidate[1].genoma.default[j] = generate_gene()
+			-- candidate[1].genoma.default[j] = debug_fsm()
+		end
+	end
+
+	for i = 1, 9 do
+		if math.random() < mutate_eye then
+			candidate[1].genoma.ground[i] = {}
+			candidate[1].genoma.ground[i] = generate_gene()
+		end
+		if math.random() < mutate_eye then
+			candidate[1].genoma.enemy[i] = {}
+			candidate[1].genoma.enemy[i] = generate_gene()
 		end
 	end
 end
@@ -427,16 +694,20 @@ function breed_population()
         -- Crossover
         for j = 1, genoma_size do
             if(random_bool())then
-                candidate[i].genoma[j] = offspring[mother].genoma[j]
+            	candidate[i].genoma.default[j] = {}
+                candidate[i].genoma.default[j] = offspring[mother].genoma.default[j]
             else
-                candidate[i].genoma[j] = offspring[father].genoma[j]
+            	candidate[i].genoma.default[j] = {}
+                candidate[i].genoma.default[j] = offspring[father].genoma.default[j]
             end
         end
 
         if(math.random(1, 100) < mutation_chance) then
             for j = 1, genoma_size do
                 if (math.random(1, 100) < MutationSize) then
-                    candidate[i].genoma[j] = generate_gene()
+                    candidate[i].genoma.default[j] = {}
+                    candidate[i].genoma.default[j] = generate_gene()
+                    -- candidate[i].genoma.default[j] = debug_fsm()
                 end
             end
         end
@@ -453,20 +724,29 @@ end
 -- funçao que pega o primeiro individuo (o gene modelo) e apartir dele 
 -- produz uma populaçao de individuos com pouca diferença do gene modelo 
 function generate_messiah_chuildren()
+	
 	--alterando o estado atual do tamanh da populaçao
 	pop_size = 20
+	
 	--gerando os filhos do Gene modelo, começando em 2 pois o 1 é o gene modelo que tem que ficar vivo
 	for i=2, pop_size do
+		
 		candidate[i] = {}
 		candidate[i].genoma = {}
 		candidate[i].fitness = 0.0
 		candidate[i].mutation_point= -1
+		
 		for j=1, genoma_size do
-			candidate[i].genoma[j] = {}
+		
+			candidate[i].genoma.default[j] = {}
+		
 			if(math.random(1,100) > MutationSize) then
-				candidate[i].genoma[j] = candidate[1].genoma[j]
+				candidate[i].genoma.default[j] = {}
+				candidate[i].genoma.default[j] = candidate[1].genoma.default[j]
 	    	else
-	    		candidate[i].genoma[j] = generate_gene()
+	    		candidate[i].genoma.default[j] = {}
+	    		candidate[i].genoma.default[j] = generate_gene()
+	    		-- candidate[i].genoma.default[j] = debug_fsm()
 			end
 	    end
 	end
@@ -509,11 +789,38 @@ function display_status()
 	gui.text(0, 60, "Mario x: " .. memory.read_u16_le(PLAYER_POS_ADDRESS))
 	gui.text(0, 80, "Score: " .. get_score())
 	print_buttons()
+
+	-- Desenha os olhos sem ficar fazendo checagem (performance)
+	memory.usememorydomain("WRAM")
+	local screenX = MARIO_XIS - memory.read_s16_le(0x1A)
+	local screenY = MARIO_YPSILON - memory.read_s16_le(0x1C)
+	local off = 8
+	-- Ground Eyes
+	gui.drawBox(screenX+32, screenY-8 , screenX+32+off, screenY-8-off	, 0xFFFFFFFF, 0x45FFFFFF)
+	gui.drawBox(screenX+32, screenY+24, screenX+32+off, screenY+24-off	, 0xFFFFFFFF, 0x45FFFFFF)
+	gui.drawBox(screenX+32, screenY+40, screenX+32+off, screenY+40-off	, 0xFFFFFFFF, 0x45FFFFFF)
+	gui.drawBox(screenX+64, screenY-8 , screenX+64+off, screenY-8-off	, 0xFFFFFFFF, 0x45FFFFFF)
+	gui.drawBox(screenX+64, screenY+24, screenX+64+off, screenY+24-off	, 0xFFFFFFFF, 0x45FFFFFF)
+	gui.drawBox(screenX+64, screenY+40, screenX+64+off, screenY+40-off	, 0xFFFFFFFF, 0x45FFFFFF)
+	gui.drawBox(screenX+96, screenY-8 , screenX+96+off, screenY-8-off	, 0xFFFFFFFF, 0x45FFFFFF)
+	gui.drawBox(screenX+96, screenY+24, screenX+96+off, screenY+24-off	, 0xFFFFFFFF, 0x45FFFFFF)
+	gui.drawBox(screenX+96, screenY+40, screenX+96+off, screenY+40-off	, 0xFFFFFFFF, 0x45FFFFFF)
+
+	-- Enemy Eyes
+	gui.drawBox(screenX+32, screenY+0 , screenX+32+off, screenY+0-off	, 0xFFFFA0A0, 0x45FFA0A0)
+	gui.drawBox(screenX+32, screenY+24, screenX+32+off, screenY+24-off	, 0xFFFFA0A0, 0x45FFA0A0)
+	gui.drawBox(screenX+32, screenY+48, screenX+32+off, screenY+48-off	, 0xFFFFA0A0, 0x45FFA0A0)
+	gui.drawBox(screenX+64, screenY+0 , screenX+64+off, screenY+0-off	, 0xFFFFA0A0, 0x45FFA0A0)
+	gui.drawBox(screenX+64, screenY+24, screenX+64+off, screenY+24-off	, 0xFFFFA0A0, 0x45FFA0A0)
+	gui.drawBox(screenX+64, screenY+48, screenX+64+off, screenY+48-off	, 0xFFFFA0A0, 0x45FFA0A0)
+	gui.drawBox(screenX+96, screenY+0 , screenX+96+off, screenY+0-off	, 0xFFFFA0A0, 0x45FFA0A0)
+	gui.drawBox(screenX+96, screenY+24, screenX+96+off, screenY+24-off	, 0xFFFFA0A0, 0x45FFA0A0)
+	gui.drawBox(screenX+96, screenY+48, screenX+96+off, screenY+48-off	, 0xFFFFA0A0, 0x45FFA0A0)
 end
 
 -- Fitness weights
-weight1 = 0.3
-weight2 = 0.2
+weight1 = 0.5
+weight2 = 0.5
 weight3 = 0.3
 clear = 1000
 
@@ -524,6 +831,7 @@ LAST_GROUND = 0
 
 -- AG rates
 MutationSize = 3
+mutate_eye = 0.2
 mutation_chance = 20
 local_mutation_size = 1
 local_mutation_range = 10
@@ -573,7 +881,7 @@ for	i = 1, max_generation do
 
 		-- print("Testando individuo " .. j)
 		
-		local movimento = 1
+		movimento = 1
 		
 		savestate.load(saveFile)
 		memory.write_u24_le(SCORE_ADDRESS, 0)	-- Reset score to 0
@@ -589,18 +897,19 @@ for	i = 1, max_generation do
 			get_mario_pos()
 			local level_ended = level_end()
 
-		    -- display_status()
+		    display_status()
+			joypad.set(FSM(candidate[j].genoma), 1)
 
-			joypad.set(candidate[j].genoma[movimento], 1)
-
-			if (emu.framecount()%60 == 0) or ( (emu.framecount()%20 == 0) and (should_move()) ) then
+			if emu.framecount()%20 == 0 then
 				movimento = movimento + 1
 			end
 
 			if is_dumb() or is_he_deaded_yet() or level_ended then
 
+				local_state_mutation(candidate[j].genoma)
 				fim = true
 				candidate[j].fitness = fitness()
+
 
 				if level_ended then
 
@@ -615,31 +924,6 @@ for	i = 1, max_generation do
 					candidate[j].mutation_point = movimento
 				end
 			end
-
-			-- Desenha os olhos sem ficar fazendo checagem (performance)
-			-- memory.usememorydomain("WRAM")
-			-- local screenX = MARIO_XIS - memory.read_s16_le(0x1A)
-			-- local screenY = MARIO_YPSILON - memory.read_s16_le(0x1C)
-			-- local off = 8
-			-- gui.drawBox(screenX+32, screenY-8 , screenX+32+off, screenY-8-off	, 0xFFFFFFFF, 0x45FFFFFF)
-			-- gui.drawBox(screenX+32, screenY+16, screenX+32+off, screenY+16-off	, 0xFFFFFFFF, 0x45FFFFFF)
-			-- gui.drawBox(screenX+32, screenY+40, screenX+32+off, screenY+40-off	, 0xFFFFFFFF, 0x45FFFFFF)
-			-- gui.drawBox(screenX+64, screenY-8 , screenX+64+off, screenY-8-off	, 0xFFFFFFFF, 0x45FFFFFF)
-			-- gui.drawBox(screenX+64, screenY+16, screenX+64+off, screenY+16-off	, 0xFFFFFFFF, 0x45FFFFFF)
-			-- gui.drawBox(screenX+64, screenY+40, screenX+64+off, screenY+40-off	, 0xFFFFFFFF, 0x45FFFFFF)
-			-- gui.drawBox(screenX+96, screenY-8 , screenX+96+off, screenY-8-off	, 0xFFFFFFFF, 0x45FFFFFF)
-			-- gui.drawBox(screenX+96, screenY+16, screenX+96+off, screenY+16-off	, 0xFFFFFFFF, 0x45FFFFFF)
-			-- gui.drawBox(screenX+96, screenY+40, screenX+96+off, screenY+40-off	, 0xFFFFFFFF, 0x45FFFFFF)
-
-			-- gui.drawBox(screenX+32, screenY+0 , screenX+32+off, screenY+0-off	, 0xFFFFA0A0, 0x45FFA0A0)
-			-- gui.drawBox(screenX+32, screenY+24, screenX+32+off, screenY+24-off	, 0xFFFFA0A0, 0x45FFA0A0)
-			-- gui.drawBox(screenX+32, screenY+48, screenX+32+off, screenY+48-off	, 0xFFFFA0A0, 0x45FFA0A0)
-			-- gui.drawBox(screenX+64, screenY+0 , screenX+64+off, screenY+0-off	, 0xFFFFA0A0, 0x45FFA0A0)
-			-- gui.drawBox(screenX+64, screenY+24, screenX+64+off, screenY+24-off	, 0xFFFFA0A0, 0x45FFA0A0)
-			-- gui.drawBox(screenX+64, screenY+48, screenX+64+off, screenY+48-off	, 0xFFFFA0A0, 0x45FFA0A0)
-			-- gui.drawBox(screenX+96, screenY+0 , screenX+96+off, screenY+0-off	, 0xFFFFA0A0, 0x45FFA0A0)
-			-- gui.drawBox(screenX+96, screenY+24, screenX+96+off, screenY+24-off	, 0xFFFFA0A0, 0x45FFA0A0)
-			-- gui.drawBox(screenX+96, screenY+48, screenX+96+off, screenY+48-off	, 0xFFFFA0A0, 0x45FFA0A0)
 
 	    	emu.frameadvance()
 		end
