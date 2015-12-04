@@ -493,15 +493,9 @@ for	i = 1, max_generation do
 			movimento = math.floor(memory.read_u16_le(PLAYER_POS_ADDRESS)/16) + 1
 			memory.writebyte(TUTORIAL_BLOCK_ADDRESS, 0x00)
 
-			--mudando o gene que é "dumb" durante a simulaçao
-			if is_dumb() then
-				candidate[j].genoma[movimento] = generate_gene()
-				is_dumber = is_dumber +1
-			end
-
 			joypad.set(candidate[j].genoma[movimento], 1)
 
-			if is_he_deaded_yet() or is_dumber == 5 then
+			if is_he_deaded_yet() or is_dumb() then
 				fim = true --fim da simulaçao
 				candidate[j].fitness = fitness()
 				candidate[j].mutation_point = movimento
