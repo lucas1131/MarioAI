@@ -486,7 +486,8 @@ for	i = 1, max_generation do
 		--loop da SIMULAÇAO
 		while not fim do
 			get_mario_pos()
-
+			
+			memory.usememorydomain("System Bus")
 			memory.writebyte(TUTORIAL_BLOCK_ADDRESS, 0x00)
 			
 			joypad.set(candidate[j].genoma[movimento], 1)
