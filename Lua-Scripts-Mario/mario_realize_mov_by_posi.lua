@@ -270,7 +270,7 @@ function generate_gene()
 	gene.Y = random_bool()
 	gene.Up = random_bool()
 	gene.Down = random_bool()
-	gene.Right = random_bool()
+	gene.Right = true--random_bool()
 	gene.Left = false--random_bool()
 
 	return gene
@@ -337,37 +337,19 @@ local function Breed_population()
     local offspring = {}
     local k = 1
     local mother
-    local father
 
-    --salvando a populaço
-    for i = 1, pop_size do
-        offspring[i] = {}
-        for j=1, genoma_size do
-        	offspring[i].genoma = {}
-        	offspring[i].genoma[j] = candidate[i].genoma[j]
-        end
-    end
-
-    for i = 0.2*pop_size, pop_size do
-		mother = math.random(1, pop_size)
-		father = math.random(1, pop_size)
+    for i = 0.2*pop_size+1, pop_size do
+		mother = math.random(1, 0.2*pop_size)
 
         -- Crossover
-        for j = 1, genoma_size do
-            if(random_bool())then
-                candidate[i].genoma[j] = offspring[mother].genoma[j]
-            else
-                candidate[i].genoma[j] = offspring[father].genoma[j]
-            end
-        end
-
-        if(math.random(1, 100) < mutation_chance) then
-            for j = 1, genoma_size do
-                if (math.random(1, 100) < Mutation_Size) then
-                    candidate[i].genoma[j] = generate_gene()
-                end
-            end
-        end
+        for j=1, genoma_size do
+			candidate[i].genoma[j] = {}
+			if(math.random(1,100) > Mutation_Size) then
+				candidate[i].genoma[j] = candidate[mother].genoma[j]
+	    	else
+	    		candidate[i].genoma[j] = generate_gene()
+			end
+	    end
         candidate[i].mutation_point = -1
     end
 end
@@ -511,15 +493,15 @@ for	i = 1, max_generation do
 			movimento = math.floor(memory.read_u16_le(PLAYER_POS_ADDRESS)/16) + 1
 			memory.writebyte(TUTORIAL_BLOCK_ADDRESS, 0x00)
 
-			joypad.set(candidate[j].genoma[movimento], 1)
-
 			--mudando o gene que é "dumb" durante a simulaçao
 			if is_dumb() then
 				candidate[j].genoma[movimento] = generate_gene()
 				is_dumber = is_dumber +1
 			end
 
-			if is_he_deaded_yet() or is_dumber == 15 then
+			joypad.set(candidate[j].genoma[movimento], 1)
+
+			if is_he_deaded_yet() or is_dumber == 5 then
 				fim = true --fim da simulaçao
 				candidate[j].fitness = fitness()
 				candidate[j].mutation_point = movimento
