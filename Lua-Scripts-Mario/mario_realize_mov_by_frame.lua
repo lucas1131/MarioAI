@@ -270,7 +270,7 @@ function generate_gene()
 	gene.Y = random_bool()
 	gene.Up = random_bool()
 	gene.Down = random_bool()
-	gene.Right = random_bool()
+	gene.Right = true--random_bool()
 	gene.Left = false--random_bool()
 
 	return gene
@@ -501,22 +501,13 @@ for	i = 1, max_generation do
 		dumb_counter = 0
 		LAST_GROUND = 0
 
-		--is_dumber é a varivavel que vai ver se o gene ta "travado" em algum lugar da fase
-		local is_dumber =0
-
 		--loop da SIMULAÇAO
 		while not fim do
 			get_mario_pos()
 			
 			joypad.set(candidate[j].genoma[movimento], 1)
 
-			--mudando o gene que é "dumb" durante a simulaçao
-			if is_dumb() then
-				candidate[j].genoma[movimento] = generate_gene()
-				is_dumber = is_dumber +1
-			end
-
-			if is_he_deaded_yet() or is_dumber == 15 then
+			if is_he_deaded_yet() or is_dumb() == 15 then
 				fim = true --fim da simulaçao
 				candidate[j].fitness = fitness()
 				candidate[j].mutation_point = movimento
