@@ -337,37 +337,19 @@ local function Breed_population()
     local offspring = {}
     local k = 1
     local mother
-    local father
 
-    --salvando a populaço
-    for i = 1, pop_size do
-        offspring[i] = {}
-        for j=1, genoma_size do
-        	offspring[i].genoma = {}
-        	offspring[i].genoma[j] = candidate[i].genoma[j]
-        end
-    end
-
-    for i = 0.2*pop_size, pop_size do
-		mother = math.random(1, pop_size)
-		father = math.random(1, pop_size)
+    for i = 0.2*pop_size+1, pop_size do
+		mother = math.random(1, 0.2*pop_size)
 
         -- Crossover
-        for j = 1, genoma_size do
-            if(random_bool())then
-                candidate[i].genoma[j] = offspring[mother].genoma[j]
-            else
-                candidate[i].genoma[j] = offspring[father].genoma[j]
-            end
-        end
-
-        if(math.random(1, 100) < mutation_chance) then
-            for j = 1, genoma_size do
-                if (math.random(1, 100) < Mutation_Size) then
-                    candidate[i].genoma[j] = generate_gene()
-                end
-            end
-        end
+        for j=1, genoma_size do
+			candidate[i].genoma[j] = {}
+			if(math.random(1,100) > Mutation_Size) then
+				candidate[i].genoma[j] = candidate[mother].genoma[j]
+	    	else
+	    		candidate[i].genoma[j] = generate_gene()
+			end
+	    end
         candidate[i].mutation_point = -1
     end
 end
@@ -450,7 +432,7 @@ mutation_chance = 20
 local_mutation_size = 1
 local_mutation_range = 20
 max_generation = 400
-genoma_size = 500
+genoma_size = 700
 pop_size = 1
 
 candidate = {}
@@ -504,10 +486,12 @@ for	i = 1, max_generation do
 		--loop da SIMULAÇAO
 		while not fim do
 			get_mario_pos()
+
+			memory.writebyte(TUTORIAL_BLOCK_ADDRESS, 0x00)
 			
 			joypad.set(candidate[j].genoma[movimento], 1)
 
-			if is_he_deaded_yet() or is_dumb() == 15 then
+			if is_he_deaded_yet() or is_dumb() then
 				fim = true --fim da simulaçao
 				candidate[j].fitness = fitness()
 				candidate[j].mutation_point = movimento
